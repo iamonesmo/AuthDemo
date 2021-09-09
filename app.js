@@ -22,6 +22,8 @@ db.once("open", ()=>{
     console.log("Database connected");
 });
 
+//ejs config
+
 app.set('view engine', 'ejs')
 app.set('views', 'views')
 
@@ -49,6 +51,16 @@ app.use((req, res, next)=>{
 })
 
 
+//login middleware
+const requireLogin = (req, res, next) =>{
+    if(!req.session.user_id){
+        req.flash('error', 'please login first')
+        return res.redirect('/login')
+    }
+    next()
+}
+
+
 //ROUTES
 app.get('/', (req, res)=>{
     res.render('home.ejs')
@@ -71,14 +83,14 @@ app.get('/logout',(req, res)=>{
 
 app.post('/register', async(req, res)=>{
     const {username, password } = req.body;
-    //hash the password
-    const hash = await bcrypt.hash(password, 12);
+    // //hash the password
+    // const hash = await bcrypt.hash(password, 12);
+
+    
 
     //create new user and save
-    const user = new User({
-        username,
-        password: hash
-    })
+    const user = new User({username, password})
+    //hashing is now done through a middleware before saving the user
     await user.save()
     req.session.user_id = user._id;
     req.flash('success', 'Successfully registered as a new user.')
@@ -92,11 +104,14 @@ app.post('/login', async(req, res)=>{
     const { username, password } = req.body;
 
     //bcrypt comparison logic
-    const user = await User.findOne({ username: username})
-    const validPassword = await bcrypt.compare(password, user.password)
+    // const user = await User.findOne({ username: username})
+    // const validPassword = await bcrypt.compare(password, user.password)
 
-    if(validPassword){
-        req.session.user_id = user._id;
+    const foundUser = await User.findAndValidate(username, password)
+    
+
+    if(foundUser){
+        req.session.user_id = foundUser._id;
         res.redirect('/secret')
     } else{
         res.redirect('/login')
@@ -113,11 +128,8 @@ app.post('/logout',(req, res)=>{
     res.redirect('/')
 })
 
-app.get('/secret', (req, res)=>{
-    if(!req.session.user_id){
-        req.flash('error','please login first.')
-        return res.redirect('/login')
-    } 
+app.get('/secret',requireLogin, (req, res)=>{
+    
     res.send('Yay!! you can now see the secret!')
 })
 

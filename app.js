@@ -35,8 +35,8 @@ const sessionConfig = {
     saveUninitialized: true,
     cookie: {
         httpOnly: true,
-        expires: Date.now() + (1000 * 60 * 60* 24 * 7),
-        maxAge: 1000 * 60 * 60* 24 * 7,
+        expires: Date.now() + (1000 * 60 * 60),
+        maxAge: 1000 * 60 * 60
     }
 }
 app.use(session(sessionConfig))
@@ -54,8 +54,19 @@ app.get('/', (req, res)=>{
     res.render('home.ejs')
 })
 
+
+
 app.get('/register', (req, res)=>{
     res.render('register.ejs')
+})
+
+app.get('/login', (req, res)=>{
+    res.render('login.ejs')
+})
+
+app.get('/logout',(req, res)=>{
+    
+    res.render('logout.ejs')
 })
 
 app.post('/register', async(req, res)=>{
@@ -69,6 +80,7 @@ app.post('/register', async(req, res)=>{
         password: hash
     })
     await user.save()
+    req.session.user_id = user._id;
     req.flash('success', 'Successfully registered as a new user.')
 
     //redirect
@@ -76,8 +88,41 @@ app.post('/register', async(req, res)=>{
 
 })
 
+app.post('/login', async(req, res)=>{
+    const { username, password } = req.body;
+
+    //bcrypt comparison logic
+    const user = await User.findOne({ username: username})
+    const validPassword = await bcrypt.compare(password, user.password)
+
+    if(validPassword){
+        req.session.user_id = user._id;
+        res.redirect('/secret')
+    } else{
+        res.redirect('/login')
+    }
+})
 
 
-app.listen(8000, ()=>{
-    console.log('Listening on port 8000')
+app.post('/logout',(req, res)=>{
+    //req.session.destroy() for destroying a user's entire session
+    //usually done when there is more than one bit of info you want gone after logout
+
+    req.session.user_id =null;
+    req.flash('success', 'log out successful!')
+    res.redirect('/')
+})
+
+app.get('/secret', (req, res)=>{
+    if(!req.session.user_id){
+        req.flash('error','please login first.')
+        return res.redirect('/login')
+    } 
+    res.send('Yay!! you can now see the secret!')
+})
+
+
+
+app.listen(3000, ()=>{
+    console.log('Listening on port 3000')
 })

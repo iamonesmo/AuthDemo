@@ -1,2 +1,2 @@
 # AuthDemo
-a simple and crude demo implementing secure authentication functionality using bcrypt
+a simple and crude demo implementing secure(-ish) authentication functionality using bcrypt
